@@ -6,14 +6,15 @@ marked.setOptions({ breaks: true, gfm: true });
 // Constants
 const EB_ROOT_ID = "ezybuddy-root";
 const EB_PANEL_ID = "ezybuddy-panel";
-const ACCENT = "#5865f2"; // Discord-ish indigo — pleasant, professional
+const ACCENT = "#5865f2";
 const ACCENT_DIM = "rgba(88,101,242,0.15)";
-const BG_PANEL = "#18191c";
-const BG_SURFACE = "#232428";
-const BG_INPUT = "#2b2d31";
+const ACCENT_GRADIENT = "linear-gradient(135deg, #5865f2 0%, #8b5cf6 100%)";
+const BG_PANEL = "rgba(15, 17, 20, 0.95)"; // Darker and more opaque for light mode contrast
+const BG_SURFACE = "rgba(15, 17, 20, 0.85)"; // Assistant bubble
+const BG_INPUT = "rgba(0, 0, 0, 0.35)"; // Input box
 const TEXT_PRIMARY = "#f2f3f5";
-const TEXT_MUTED = "#949ba4";
-const BORDER = "rgba(255,255,255,0.06)";
+const TEXT_MUTED = "#b5bac1"; // Brighter for better contrast
+const BORDER = "rgba(255,255,255,0.12)";
 
 // State
 let modelLoaded = false;
@@ -115,25 +116,37 @@ function createButton() {
   // Floating Action Button
   const btn = document.createElement("button");
   btn.title = "EzyBuddy (double-click to hide)";
-  btn.innerHTML = svg(`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`);
+  btn.innerHTML = svg(`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`);
   css(btn, {
-    width: "46px",
-    height: "46px",
-    borderRadius: "50%",
-    border: `1.5px solid ${ACCENT}`,
+    width: "48px",
+    height: "48px",
+    borderRadius: "24px",
+    border: `1px solid rgba(255,255,255,0.1)`,
     background: BG_PANEL,
-    color: ACCENT,
+    backdropFilter: "blur(12px)",
+    color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "grab",
-    boxShadow: `0 4px 24px rgba(88,101,242,0.35), 0 1px 4px rgba(0,0,0,0.5)`,
-    transition: "box-shadow 0.2s, background 0.2s",
+    boxShadow: `0 8px 32px rgba(88,101,242,0.25), inset 0 0 0 1px rgba(255,255,255,0.05)`,
+    transition: "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s, background 0.3s",
     touchAction: "none",
     outline: "none",
   });
-  btn.onmouseenter = () => { btn.style.background = ACCENT_DIM; btn.style.boxShadow = `0 6px 30px rgba(88,101,242,0.5)`; };
-  btn.onmouseleave = () => { btn.style.background = BG_PANEL; btn.style.boxShadow = `0 4px 24px rgba(88,101,242,0.35), 0 1px 4px rgba(0,0,0,0.5)`; };
+  (btn.style as any).webkitBackdropFilter = "blur(12px)";
+
+  // Inject the gradient via a pseudo-element style later, or just apply it on hover
+  btn.onmouseenter = () => {
+    btn.style.background = ACCENT_GRADIENT;
+    btn.style.boxShadow = `0 12px 40px rgba(88,101,242,0.4), inset 0 0 0 1px rgba(255,255,255,0.2)`;
+    btn.style.transform = "scale(1.05)";
+  };
+  btn.onmouseleave = () => {
+    btn.style.background = BG_PANEL;
+    btn.style.boxShadow = `0 8px 32px rgba(88,101,242,0.25), inset 0 0 0 1px rgba(255,255,255,0.05)`;
+    btn.style.transform = "scale(1)";
+  };
 
   // Panel
   const panel = document.createElement("div");
@@ -142,39 +155,43 @@ function createButton() {
     position: "fixed",
     right: "20px",
     bottom: "74px",
-    width: "340px",
-    maxHeight: "520px",
+    width: "350px",
+    maxHeight: "560px",
     display: "none",
     flexDirection: "column",
-    borderRadius: "16px",
+    borderRadius: "20px",
     background: BG_PANEL,
-    border: `1px solid rgba(88,101,242,0.3)`,
-    boxShadow: `0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px ${BORDER}`,
+    backdropFilter: "blur(24px)",
+    border: `1px solid rgba(255,255,255,0.15)`,
+    boxShadow: `0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15)`,
     overflow: "hidden",
     zIndex: "2147483647",
+    transformOrigin: "bottom right",
+    animation: "eb-panel-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
   });
+  (panel.style as any).webkitBackdropFilter = "blur(24px)";
   document.documentElement.appendChild(panel);
   _panel = panel;
 
   // Injected styles (markdown + animations + scrollbar)
   const style = document.createElement("style");
   style.textContent = `
-    #${EB_PANEL_ID} * { box-sizing: border-box; }
+    #${EB_PANEL_ID} * { box-sizing: border-box; font-family: "Inter", system-ui, sans-serif !important; }
     #${EB_PANEL_ID} ::-webkit-scrollbar { width: 4px; }
     #${EB_PANEL_ID} ::-webkit-scrollbar-track { background: transparent; }
     #${EB_PANEL_ID} ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
-    .eb-md { font-size: 13px; line-height: 1.6; color: ${TEXT_MUTED}; }
-    .eb-md h1,.eb-md h2,.eb-md h3 { margin: 8px 0 4px; font-weight: 600; color: ${TEXT_PRIMARY}; }
+    .eb-md { font-size: 13px; line-height: 1.6; color: ${TEXT_MUTED} !important; }
+    .eb-md h1,.eb-md h2,.eb-md h3 { margin: 8px 0 4px; font-weight: 600; color: ${TEXT_PRIMARY} !important; }
     .eb-md h2 { font-size: 14px; border-bottom: 1px solid ${BORDER}; padding-bottom: 4px; }
     .eb-md h3 { font-size: 13px; }
-    .eb-md p  { margin: 4px 0; }
-    .eb-md ul,.eb-md ol { margin: 4px 0 4px 16px; padding: 0; }
-    .eb-md li { margin: 3px 0; }
-    .eb-md li::marker { color: ${ACCENT}; }
-    .eb-md a  { color: ${ACCENT}; text-decoration: none; }
+    .eb-md p  { margin: 4px 0; color: ${TEXT_MUTED} !important; }
+    .eb-md ul,.eb-md ol { margin: 4px 0 4px 16px; padding: 0; color: ${TEXT_MUTED} !important; }
+    .eb-md li { margin: 3px 0; color: ${TEXT_MUTED} !important; }
+    .eb-md li::marker { color: ${ACCENT} !important; }
+    .eb-md a  { color: ${ACCENT} !important; text-decoration: none; }
     .eb-md a:hover { text-decoration: underline; }
-    .eb-md strong { color: ${TEXT_PRIMARY}; font-weight: 600; }
-    .eb-md code { background: rgba(88,101,242,0.12); color: #b9beff; padding: 2px 5px; border-radius: 4px; font-size: 11.5px; font-family: 'SF Mono', Menlo, Consolas, monospace; }
+    .eb-md strong { color: ${TEXT_PRIMARY} !important; font-weight: 600; }
+    .eb-md code { background: rgba(88,101,242,0.12) !important; color: #b9beff !important; padding: 2px 5px; border-radius: 4px; font-size: 11.5px; font-family: 'SF Mono', Menlo, Consolas, monospace !important; }
     .eb-md pre  { background: #111214; border: 1px solid ${BORDER}; border-radius: 8px; padding: 10px 12px; overflow-x: auto; margin: 6px 0; }
     .eb-md pre code { background: none; padding: 0; color: #cdd2fa; }
     .eb-md blockquote { border-left: 3px solid ${ACCENT}; margin: 6px 0; padding: 4px 10px; color: ${TEXT_MUTED}; background: ${ACCENT_DIM}; border-radius: 0 6px 6px 0; }
@@ -184,6 +201,9 @@ function createButton() {
     .eb-md input[type="checkbox"] { display: none; }
     .eb-md hr { border: none; border-top: 1px solid ${BORDER}; margin: 8px 0; }
     @keyframes eb-pulse { 0%,80%,100% { opacity:0.3; transform:scale(0.75); } 40% { opacity:1; transform:scale(1); } }
+    @keyframes eb-slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes eb-panel-in { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .eb-bubble-anim { animation: eb-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     .eb-dot { display:inline-block; width:5px; height:5px; border-radius:50%; background:${ACCENT}; margin:0 2px; animation:eb-pulse 1.3s ease infinite; }
     .eb-dot:nth-child(2) { animation-delay:.18s; }
     .eb-dot:nth-child(3) { animation-delay:.36s; }
@@ -450,24 +470,26 @@ function createButton() {
   input.onblur = () => { input.style.borderColor = "rgba(255,255,255,0.08)"; };
 
   const send = document.createElement("button");
-  send.innerHTML = svg(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`);
+  send.title = "Send";
+  send.innerHTML = svg(`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`);
   css(send, {
+    border: "none",
+    background: ACCENT_GRADIENT,
+    color: "#fff",
     width: "36px",
     height: "36px",
-    borderRadius: "8px",
-    border: "none",
-    background: ACCENT,
-    color: "#fff",
+    borderRadius: "10px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     flexShrink: "0",
-    transition: "opacity 0.15s, transform 0.15s",
+    transition: "opacity 0.2s, transform 0.2s, box-shadow 0.2s",
+    boxShadow: "0 2px 10px rgba(88,101,242,0.3)",
     outline: "none",
   });
-  send.onmouseenter = () => { send.style.opacity = "0.85"; send.style.transform = "scale(1.04)"; };
-  send.onmouseleave = () => { send.style.opacity = "1"; send.style.transform = "scale(1)"; };
+  send.onmouseenter = () => { send.style.opacity = "0.9"; send.style.transform = "scale(1.06)"; send.style.boxShadow = "0 4px 12px rgba(88,101,242,0.4)"; };
+  send.onmouseleave = () => { send.style.opacity = "1"; send.style.transform = "scale(1)"; send.style.boxShadow = "0 2px 10px rgba(88,101,242,0.3)"; };
 
   composer.append(input, send);
   panel.append(header, quick, messages, composer);
@@ -475,17 +497,19 @@ function createButton() {
   // Push Message (user / assistant bubble)
   function pushMessage(role: "user" | "assistant", text: string): HTMLDivElement {
     const bubble = document.createElement("div");
+    bubble.className = "eb-bubble-anim";
     css(bubble, {
       alignSelf: role === "user" ? "flex-end" : "flex-start",
       maxWidth: "88%",
-      padding: "8px 12px",
-      borderRadius: role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+      padding: "10px 14px",
+      borderRadius: role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
       fontSize: "13px",
       lineHeight: "1.55",
       wordBreak: "break-word",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
       ...(role === "user"
-        ? { background: ACCENT, color: "#fff" }
-        : { background: BG_SURFACE, border: `1px solid ${BORDER}`, color: TEXT_MUTED }),
+        ? { background: ACCENT_GRADIENT, color: "#fff" }
+        : { background: BG_SURFACE, border: `1px solid ${BORDER}`, color: TEXT_PRIMARY }),
     });
     if (role === "assistant") bubble.classList.add("eb-md");
     if (text) {
@@ -500,6 +524,7 @@ function createButton() {
   // Typing indicator
   function pushTyping(): HTMLDivElement {
     const el = document.createElement("div");
+    el.className = "eb-bubble-anim";
     el.dataset.typing = "true";
 
     if (!modelLoaded) {
