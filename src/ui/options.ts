@@ -4,9 +4,12 @@ type UserProfile = {
   phone: string;
   location: string;
   summary: string;
+  profession: string;
+  interests: string;
 };
 
 const STORAGE_KEY = "ezybuddy:userProfile";
+
 
 function getInput(id: string): HTMLInputElement {
   const el = document.getElementById(id);
@@ -58,14 +61,14 @@ async function saveProfile() {
     email: getInput("eb-email").value.trim(),
     phone: getInput("eb-phone").value.trim(),
     location: getInput("eb-location").value.trim(),
-    summary: getTextarea("eb-summary").value.trim()
+    summary: getTextarea("eb-summary").value.trim(),
+    profession: (document.getElementById("eb-profession") as HTMLInputElement)?.value?.trim() ?? "",
+    interests: (document.getElementById("eb-interests") as HTMLInputElement)?.value?.trim() ?? "",
   };
 
   chrome.storage.local.set({ [STORAGE_KEY]: profile }, () => {
-    status.textContent = "Profile saved. EzyBuddy will now use it to help fill forms.";
-    setTimeout(() => {
-      status.textContent = "";
-    }, 4000);
+    status.textContent = "Profile saved!";
+    setTimeout(() => { status.textContent = ""; }, 3000);
   });
 }
 

@@ -235,23 +235,51 @@ function createButton() {
   closeBtn.onmouseleave = () => { closeBtn.style.color = TEXT_MUTED; closeBtn.style.background = "transparent"; };
   closeBtn.onclick = () => { panel.style.display = "none"; };
 
+  const profileBtn = document.createElement("button");
+  profileBtn.title = "Settings / Profile";
+  profileBtn.innerHTML = svg(`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`);
+  css(profileBtn, headerBtnStyle);
+  profileBtn.onmouseenter = () => { profileBtn.style.color = TEXT_PRIMARY; profileBtn.style.background = "rgba(255,255,255,0.06)"; };
+  profileBtn.onmouseleave = () => { profileBtn.style.color = TEXT_MUTED; profileBtn.style.background = "transparent"; };
+  profileBtn.onclick = () => {
+    // Open onboarding form pre-filled with current data
+    if (userProfile) {
+      (document.getElementById("eb-ob-name") as HTMLInputElement).value = userProfile.name || "";
+      (document.getElementById("eb-ob-prof") as HTMLInputElement).value = userProfile.profession || "";
+      (document.getElementById("eb-ob-int") as HTMLInputElement).value = userProfile.interests || "";
+    }
+    const btn = document.getElementById("eb-ob-submit") as HTMLButtonElement;
+    if (btn) btn.textContent = "Save Profile";
+
+    // We can't call setOnboardingMode here directly because it's defined later, 
+    // so we'll dispatch an event or just expose a global-ish function later. 
+    // For now, let's just dispatch a custom event.
+    panel.dispatchEvent(new CustomEvent("eb:open-onboarding"));
+  };
+
   const headerActions = document.createElement("div");
   css(headerActions, { display: "flex", alignItems: "center", gap: "2px" });
-  headerActions.append(clearBtn, closeBtn);
+  headerActions.append(profileBtn, clearBtn, closeBtn);
 
   header.append(titleWrap, headerActions);
 
 
-  // Quick Actions
+  // ─ Quick Actions (chips)
+  type UserProfile = {
+    name: string;
+    profession: string;
+    interests: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    summary?: string;
+  };
+  let userProfile: UserProfile | null = null;
+
   const quick = document.createElement("div");
   css(quick, { display: "flex", gap: "6px", padding: "8px 12px", borderBottom: `1px solid ${BORDER}`, flexWrap: "wrap" });
 
-  const chips = [
-    { label: "Summarize", value: "Summarize this page in a few bullet points" },
-    { label: "Key points", value: "List the key points of this page as bullet points" },
-    { label: "Explain", value: "Explain what this page is about in simple terms" },
-  ];
-  for (const { label, value } of chips) {
+  function makeChip(label: string, getValues: () => { display: string, query: string }) {
     const chip = document.createElement("button");
     chip.textContent = label;
     css(chip, {
@@ -268,9 +296,37 @@ function createButton() {
     });
     chip.onmouseenter = () => { chip.style.background = `rgba(88,101,242,0.25)`; chip.style.color = TEXT_PRIMARY; };
     chip.onmouseleave = () => { chip.style.background = ACCENT_DIM; chip.style.color = "#b9beff"; };
-    chip.onclick = () => { input.value = value; handleSend(); };
-    quick.appendChild(chip);
+    chip.onclick = () => {
+      const { display, query } = getValues();
+      handleSend(display, query);
+    };
+    return chip;
   }
+
+  quick.appendChild(makeChip("Summarize", () => ({ display: "Summarize this page in a few bullet points", query: "Summarize this page in a few bullet points" })));
+  quick.appendChild(makeChip("Key points", () => ({ display: "List the key points of this page as bullet points", query: "List the key points of this page as bullet points" })));
+
+  // "Why useful for me?" — personalized chip
+  const whyChip = makeChip("Why useful for me?", () => {
+    const display = "Why is this useful for me?";
+
+    const prof = userProfile?.profession;
+    const int = userProfile?.interests;
+
+    if (!prof && !int) {
+      return { display, query: "Explain in 2-3 bullet points why this page might be useful to a general reader." };
+    }
+
+    const contextParts = [];
+    if (prof) contextParts.push(`a ${prof}`);
+    if (int) contextParts.push(`interested in ${int}`);
+
+    return {
+      display,
+      query: `Given I am ${contextParts.join(" and ")}, explain exactly why this page is useful to me. 2-3 short, punchy bullet points only. No fluff.`
+    };
+  });
+  quick.appendChild(whyChip);
 
   // Messages
   const messages = document.createElement("div");
@@ -289,12 +345,93 @@ function createButton() {
   css(composer, {
     display: "flex",
     padding: "10px 12px",
-    borderTop: `1px solid ${BORDER}`,
-    background: BG_SURFACE,
     gap: "8px",
+    background: BG_INPUT,
+    borderTop: `1px solid ${BORDER}`,
     alignItems: "center",
   });
 
+  // ─ Onboarding Overlay
+  const onboarding = document.createElement("div");
+  css(onboarding, {
+    // normal flow so the panel sizes around it without scrollbars
+    background: BG_SURFACE,
+    display: "none",
+    flexDirection: "column",
+    padding: "24px",
+    justifyContent: "center",
+    position: "relative",
+  });
+
+  onboarding.innerHTML = `
+    <button id="eb-ob-close" style="position: absolute; top: 12px; right: 12px; border: none; background: transparent; color: ${TEXT_MUTED}; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; border-radius: 6px; outline: none;">
+      ${svg(`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`)}
+    </button>
+    <h2 style="margin: 0 0 8px; font-size: 18px; color: ${TEXT_PRIMARY}; font-weight: 600;">Welcome to EzyBuddy</h2>
+    <p style="margin: 0 0 20px; font-size: 13px; color: ${TEXT_MUTED}; line-height: 1.5;">Tell me a bit about yourself so I can personalize my answers to your context.</p>
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <input id="eb-ob-name" type="text" placeholder="Your Name (Optional)" style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid ${BORDER}; background: ${BG_INPUT}; color: ${TEXT_PRIMARY}; font-size: 13px; outline: none; font-family: inherit;">
+      <input id="eb-ob-prof" type="text" placeholder="Profession (e.g. Software Engineer)" style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid ${BORDER}; background: ${BG_INPUT}; color: ${TEXT_PRIMARY}; font-size: 13px; outline: none; font-family: inherit;">
+      <input id="eb-ob-int" type="text" placeholder="Primary interests (e.g. AI, React, Crypto)" style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid ${BORDER}; background: ${BG_INPUT}; color: ${TEXT_PRIMARY}; font-size: 13px; outline: none; font-family: inherit;">
+      <button id="eb-ob-submit" style="margin-top: 8px; width: 100%; padding: 10px; border-radius: 6px; border: none; background: ${ACCENT}; color: white; font-weight: 500; font-size: 13px; cursor: pointer; transition: opacity 0.2s;">Save Profile</button>
+    </div>
+  `;
+  panel.appendChild(onboarding);
+
+  function setOnboardingMode(show: boolean) {
+    if (show) {
+      onboarding.style.display = "flex";
+      header.style.display = "none";
+      quick.style.display = "none";
+      messages.style.display = "none";
+      composer.style.display = "none";
+    } else {
+      onboarding.style.display = "none";
+      header.style.display = "flex";
+      quick.style.display = "flex";
+      messages.style.display = "flex";
+      composer.style.display = "flex";
+    }
+  }
+
+  // Listen for the custom event from the profile button to open settings
+  panel.addEventListener("eb:open-onboarding", () => {
+    setOnboardingMode(true);
+  });
+
+  // Load Profile from Storage
+  chrome.storage.local.get("ezybuddy:userProfile", (data) => {
+    const p = data["ezybuddy:userProfile"] as UserProfile;
+    if (p && (p.name || p.profession || p.interests)) {
+      userProfile = p;
+      setOnboardingMode(false);
+    } else {
+      setOnboardingMode(true);
+    }
+  });
+
+  // Close button functionality for onboarding
+  const obCloseBtn = onboarding.querySelector("#eb-ob-close") as HTMLButtonElement;
+  if (obCloseBtn) {
+    obCloseBtn.onmouseenter = () => { obCloseBtn.style.color = TEXT_PRIMARY; obCloseBtn.style.background = "rgba(255,255,255,0.06)"; };
+    obCloseBtn.onmouseleave = () => { obCloseBtn.style.color = TEXT_MUTED; obCloseBtn.style.background = "transparent"; };
+    obCloseBtn.onclick = () => { panel.style.display = "none"; };
+  }
+
+  onboarding.querySelector("#eb-ob-submit")?.addEventListener("click", () => {
+    const btn = onboarding.querySelector("#eb-ob-submit") as HTMLButtonElement;
+    btn.textContent = "Saving...";
+    btn.style.opacity = "0.7";
+
+    const name = (onboarding.querySelector("#eb-ob-name") as HTMLInputElement).value.trim();
+    const prof = (onboarding.querySelector("#eb-ob-prof") as HTMLInputElement).value.trim();
+    const int = (onboarding.querySelector("#eb-ob-int") as HTMLInputElement).value.trim();
+
+    userProfile = { name, profession: prof, interests: int };
+    chrome.storage.local.set({ "ezybuddy:userProfile": userProfile }, () => {
+      setOnboardingMode(false);
+    });
+  });
   const input = document.createElement("input");
   input.type = "text";
   input.placeholder = "Ask about this page…";
@@ -416,20 +553,21 @@ function createButton() {
   const activeRequests = new Map<string, { bubble: HTMLDivElement | null; typingEl: HTMLDivElement | null; rawText: string; userText: string }>();
 
   // Send logic
-  function handleSend() {
-    const value = input.value.trim();
-    if (!value) return;
+  function handleSend(overrideDisplay?: string, overrideQuery?: string) {
+    const displayValue = overrideDisplay ?? input.value.trim();
+    const queryValue = overrideQuery ?? displayValue;
+    if (!displayValue) return;
     input.value = "";
-    pushMessage("user", value);
+    pushMessage("user", displayValue);
 
     const typingEl = pushTyping();
     const requestId = crypto.randomUUID();
-    activeRequests.set(requestId, { bubble: null, typingEl, rawText: "", userText: value });
+    activeRequests.set(requestId, { bubble: null, typingEl, rawText: "", userText: displayValue });
 
     const pageContext = buildPageContext();
 
     chrome.runtime.sendMessage(
-      { type: "AI_REQUEST", payload: { requestId, mode: "pageQA", query: value, pageContext } },
+      { type: "AI_REQUEST", payload: { requestId, mode: "pageQA", query: queryValue, pageContext, userProfile } },
       (response) => {
         if (!response?.ok) {
           const req = activeRequests.get(requestId);
@@ -443,7 +581,7 @@ function createButton() {
     );
   }
 
-  send.onclick = handleSend;
+  send.onclick = () => handleSend();
   input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); handleSend(); } });
 
   // Message listener (streaming + progress)
@@ -522,7 +660,7 @@ function createButton() {
     }
   }
   window.addEventListener("popstate", () => { if (location.href !== _lastUrl) { _lastUrl = location.href; onUrlChange(); } });
-  // Polling fallback for pushState-based routers (React, Next.js etc.)
+  // Polling fallback for pushState-based routers (React, Nextwhy .js etc.)
   setInterval(() => {
     if (location.href !== _lastUrl) { _lastUrl = location.href; onUrlChange(); }
   }, 600);

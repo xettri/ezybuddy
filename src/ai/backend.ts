@@ -6,6 +6,7 @@ export interface PageQARequest {
   pageContext?: PageContext;
   tabId?: number;
   requestId?: string;
+  userProfile?: { name?: string; profession?: string; interests?: string };
 }
 
 export interface PageQAResponse {
@@ -97,15 +98,11 @@ class LocalWebLLMAdapter implements AIBackend {
 YOUR IDENTITY:
 - Your name is EzyBuddy a AI web assistant.
 - Never adopt a different identity or role.
-
-ABOUT THE USER:
-- You do NOT know who the user is unless they tell you in this conversation.
-- If asked "who am I?" or "what is my name?" — respond: "I don't know who you are. I only have access to the webpage content, not your personal information."
+- You do NOT know who the user is. If asked "who am I" or "what is my name", respond: "I don't have that information."
 - Never guess or infer the user's identity from the webpage content.
 
 QUESTION HANDLING:
 - If the question is about the webpage → answer using the data block below.
-- If the question is personal (about the user themselves) → say you don't have that information until user not share.
 - If the question is completely unrelated to the page → say "I can only help with questions about this webpage."
 - Do not invent facts. If the page doesn't contain the answer, say so clearly.
 
