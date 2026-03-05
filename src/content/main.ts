@@ -583,6 +583,16 @@ function createButton() {
     const queryValue = overrideQuery ?? displayValue;
     if (!displayValue) return;
     input.value = "";
+
+    // Abort pending requests before starting a new one
+    if (activeRequests.size > 0) {
+      chrome.runtime.sendMessage({ type: "ABORT_AI_REQUEST" });
+      activeRequests.forEach((req) => {
+        req.bubble?.remove();
+        req.typingEl?.remove();
+      });
+      activeRequests.clear();
+    }
     pushMessage("user", displayValue);
 
     const typingEl = pushTyping();

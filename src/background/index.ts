@@ -80,6 +80,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
 
+  // ABORT — halt ongoing generations
+  if (message.type === "ABORT_AI_REQUEST") {
+    if (!isTrustedSender(sender)) return;
+    chrome.runtime.sendMessage({ type: "ABORT_OFFSCREEN_AI_REQUEST" });
+    return;
+  }
+
   // AI_REQUEST — must come from a trusted content script
   if (message.type === "AI_REQUEST") {
     if (!isTrustedSender(sender)) {

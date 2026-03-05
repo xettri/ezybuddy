@@ -59,6 +59,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return;
   }
 
+  if (message.type === "ABORT_OFFSCREEN_AI_REQUEST") {
+    if (engine) engine.interruptGenerate();
+    sendResponse({ ok: true });
+    return;
+  }
+
   if (message.type === "OFFSCREEN_AI_REQUEST") {
     const payload = validatePayload(message.payload);
     if (!payload) {
