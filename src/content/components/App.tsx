@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import styled from '@emotion/styled';
 import { keyframes } from '@emotion/react';
 import { FloatingActionButton } from './FloatingActionButton';
 import { ChatPanel } from './ChatPanel';
 import { Onboarding, UserProfile } from './Onboarding';
+import { GlobalStyles } from './GlobalStyles';
 import { useChatStream } from '../hooks/useChatStream';
 import { buildPageContext } from '../pageAnalyzer';
 import { CacheProvider, EmotionCache } from '@emotion/react';
@@ -142,6 +143,7 @@ export function App({ emotionCache }: { emotionCache: EmotionCache }) {
 
   return (
     <CacheProvider value={emotionCache}>
+      <GlobalStyles />
       <AppWrapper isOnRight={isOnRight}>
         <FloatingActionButton
           isHidden={isHidden}

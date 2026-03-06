@@ -52,7 +52,7 @@ const PanelContainer = styled.div<{ isOnRight: boolean }>`
   height: 80vh;
   display: flex;
   flex-direction: column;
-  borderradius: 20px;
+  border-radius: 20px;
   background: rgba(15, 17, 20, 0.95);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -399,7 +399,10 @@ export function ChatPanel(props: ChatPanelProps) {
             {msg.role === 'user' ? (
               msg.text
             ) : (
-              <div dangerouslySetInnerHTML={{ __html: marked.parse(msg.text) as string }} />
+              <div
+                className="eb-md"
+                dangerouslySetInnerHTML={{ __html: marked.parse(msg.text) as string }}
+              />
             )}
           </Bubble>
         ))}
@@ -432,7 +435,10 @@ export function ChatPanel(props: ChatPanelProps) {
               </ProgressBubble>
             ) : (
               <Bubble role="assistant">
-                <div dangerouslySetInnerHTML={{ __html: props.activeRequest.htmlResult }} />
+                <div
+                  className="eb-md"
+                  dangerouslySetInnerHTML={{ __html: props.activeRequest.htmlResult }}
+                />
               </Bubble>
             )}
           </>
