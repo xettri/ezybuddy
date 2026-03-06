@@ -1,37 +1,5 @@
-import { getBackend } from '../ai/backend';
-
-let creatingOffscreen: Promise<void> | null = null;
-
-export async function ensureOffscreenDocument() {
-  if (await hasOffscreenDocument()) return;
-  if (creatingOffscreen) {
-    await creatingOffscreen;
-    return;
-  }
-  creatingOffscreen = chrome.offscreen.createDocument({
-    url: 'offscreen.html',
-    reasons: [chrome.offscreen.Reason.WORKERS],
-    justification: 'Running WebLLM local AI model in a sandboxed worker.',
-  });
-  await creatingOffscreen;
-  creatingOffscreen = null;
-}
-
-async function hasOffscreenDocument(): Promise<boolean> {
-  if ('getContexts' in chrome.runtime) {
-    const contexts = await chrome.runtime.getContexts({
-      contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
-    });
-    return Boolean(contexts.length);
-  }
-  // Fallback for older Chrome builds
-  try {
-    const clients = await (self as any).clients.matchAll();
-    return clients.some((c: any) => c.url.includes('offscreen.html'));
-  } catch {
-    return false;
-  }
-}
+import { getBackend } from '../../ai/backend';
+import { offscreenManager } from '../../services/offscreen';
 
 chrome.runtime.onInstalled.addListener(() => {
   // service worker installed — no action needed
@@ -103,7 +71,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'DEV_CLEAR_CACHE') {
     if (!isTrustedSender(sender)) return;
     // We must ensure the offscreen document is actually running before sending the message
-    ensureOffscreenDocument()
+    offscreenManager
+      .ensure()
       .then(() => {
         chrome.runtime.sendMessage({ type: 'DEV_CLEAR_CACHE' }, (res) => {
           sendResponse(res);

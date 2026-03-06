@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
-import { ChatEntry } from '../hooks/useChatStream';
 import styled from '@emotion/styled';
+import { ChatEntry } from '../../hooks/useChatStream';
 import { keyframes } from '@emotion/react';
+import moduleStyles from './ChatPanel.module.css';
+import rawModuleCSS from './ChatPanel.module.css?inline';
 
 interface ChatPanelProps {
   isOpen: boolean;
@@ -113,15 +115,14 @@ const QuickActions = styled.div`
 
 const Chip = styled.button`
   border: 1px solid rgba(88, 101, 242, 0.25);
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 11.5px;
+  border-radius: 15px;
+  padding: 4px 8px;
+  font-size: 10px;
   font-weight: 500;
   cursor: pointer;
   background: rgba(88, 101, 242, 0.15);
   color: #b9beff;
   outline: none;
-  font-family: inherit;
   transition:
     background 0.2s,
     border-color 0.2s;
@@ -248,7 +249,6 @@ const InputField = styled.input`
   font-size: 13px;
   padding: 8px 12px;
   outline: none;
-  font-family: inherit;
   transition: border-color 0.2s;
 
   &:focus {
@@ -278,7 +278,7 @@ const SendButton = styled.button`
   }
 `;
 
-export function ChatPanel(props: ChatPanelProps) {
+const ChatPanel = (props: ChatPanelProps) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -334,7 +334,8 @@ export function ChatPanel(props: ChatPanelProps) {
   };
 
   return (
-    <PanelContainer isOnRight={props.isOnRight}>
+    <PanelContainer isOnRight={props.isOnRight} className={moduleStyles.chatBackground}>
+      <style dangerouslySetInnerHTML={{ __html: rawModuleCSS }} />
       <Header>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <StatusIndicator loaded={props.modelLoaded} />
@@ -473,4 +474,6 @@ export function ChatPanel(props: ChatPanelProps) {
       </Composer>
     </PanelContainer>
   );
-}
+};
+
+export default ChatPanel;

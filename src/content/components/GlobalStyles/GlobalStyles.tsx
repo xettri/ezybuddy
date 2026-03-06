@@ -15,13 +15,16 @@ const panelIn = keyframes`
   to { opacity: 1; transform: scale(1) translateY(0); }
 `;
 
-export function GlobalStyles() {
+const GlobalStyles = () => {
   return (
     <Global
       styles={css`
         * {
           box-sizing: border-box;
-          font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+          font-family:
+            -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+            'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+            'Noto Color Emoji';
         }
 
         ::-webkit-scrollbar {
@@ -89,7 +92,6 @@ export function GlobalStyles() {
           padding: 2px 5px;
           border-radius: 4px;
           font-size: 11.5px;
-          font-family: 'SF Mono', Menlo, Consolas, monospace !important;
         }
         .eb-md pre {
           background: #111214;
@@ -163,4 +165,6 @@ export function GlobalStyles() {
       `}
     />
   );
-}
+};
+
+export default GlobalStyles;

@@ -90,7 +90,6 @@ const Input = styled.input`
   font-size: 13px;
   outline: none;
   width: 100%;
-  font-family: 'Inter', system-ui, sans-serif;
   transition: border-color 0.2s;
 
   &:focus {
@@ -114,7 +113,6 @@ const SaveButton = styled.button<{ isSaving: boolean }>`
   cursor: ${(props) => (props.isSaving ? 'wait' : 'pointer')};
   box-shadow: 0 4px 14px rgba(88, 101, 242, 0.3);
   opacity: ${(props) => (props.isSaving ? 0.7 : 1)};
-  font-family: 'Inter', system-ui, sans-serif;
   transition:
     transform 0.2s,
     opacity 0.2s;
@@ -129,7 +127,7 @@ const SaveButton = styled.button<{ isSaving: boolean }>`
   }
 `;
 
-export function Onboarding({ initialProfile, onSave, onClose }: OnboardingProps) {
+const Onboarding = ({ initialProfile, onSave, onClose }: OnboardingProps) => {
   const [name, setName] = useState(initialProfile?.name || '');
   const [profession, setProfession] = useState(initialProfile?.profession || '');
   const [interests, setInterests] = useState(initialProfile?.interests || '');
@@ -199,4 +197,6 @@ export function Onboarding({ initialProfile, onSave, onClose }: OnboardingProps)
       </SaveButton>
     </Container>
   );
-}
+};
+
+export default Onboarding;

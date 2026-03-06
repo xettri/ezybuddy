@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
-import { App } from './components/App';
 import createCache from '@emotion/cache';
+import { CacheProvider } from '@emotion/react';
+import App from './components/App';
 
 const EB_ROOT_ID = 'ezybuddy-root';
 const EB_CACHE_KEY = 'eb-xettri';
@@ -37,7 +38,11 @@ function injectApp() {
   shadowRoot.appendChild(appContainer);
 
   const root = createRoot(appContainer);
-  root.render(<App emotionCache={emotionCache} />);
+  root.render(
+    <CacheProvider value={emotionCache}>
+      <App />
+    </CacheProvider>,
+  );
 }
 
 if (document.readyState === 'loading') {

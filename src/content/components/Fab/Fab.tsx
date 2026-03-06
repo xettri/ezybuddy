@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import styled from '@emotion/styled';
 
-interface FABProps {
+export interface FABProps {
   isHidden: boolean;
   isOnRight: boolean;
   onToggle: () => void;
@@ -44,13 +44,7 @@ const StyledFab = styled.button<{ isHovered: boolean; isDragging: boolean }>`
   }
 `;
 
-export function FloatingActionButton({
-  isHidden,
-  onToggle,
-  onHide,
-  onSnapLeft,
-  onSnapRight,
-}: FABProps) {
+const Fab = ({ isHidden, onToggle, onHide, onSnapLeft, onSnapRight }: FABProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isDraggingState, setIsDraggingState] = useState(false);
   const isDragging = useRef(false);
@@ -125,4 +119,6 @@ export function FloatingActionButton({
       </svg>
     </StyledFab>
   );
-}
+};
+
+export default Fab;

@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import styled from '@emotion/styled';
 import { keyframes } from '@emotion/react';
-import { FloatingActionButton } from './FloatingActionButton';
-import { ChatPanel } from './ChatPanel';
-import { Onboarding, UserProfile } from './Onboarding';
-import { GlobalStyles } from './GlobalStyles';
+import Fab from './Fab';
+import ChatPanel from './ChatPanel';
+import Onboarding, { type UserProfile } from '../layouts/Onboarding';
+import GlobalStyles from './GlobalStyles';
 import { useChatStream } from '../hooks/useChatStream';
-import { buildPageContext } from '../pageAnalyzer';
-import { CacheProvider, EmotionCache } from '@emotion/react';
+import { buildPageContext } from '../../analyzer';
 
 const panelIn = keyframes`
   from { opacity: 0; transform: translateY(12px) scale(0.98); }
@@ -20,15 +19,13 @@ const AppWrapper = styled.div<{ isOnRight: boolean }>`
   z-index: 2147483647;
   bottom: 20px;
   ${(props) => (props.isOnRight ? 'right: 20px;' : 'left: 20px;')}
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 `;
 
 const OnboardingOverlay = styled.div<{ isOnRight: boolean }>`
+  ${(props) => (props.isOnRight ? 'right: 20px;' : 'left: 20px;')}
   position: fixed;
   bottom: 74px;
-  ${(props) => (props.isOnRight ? 'right: 20px;' : 'left: 20px;')}
   width: 350px;
-  height: 460px;
   display: flex;
   flex-direction: column;
   border-radius: 20px;
@@ -48,7 +45,7 @@ const ContentContainer = styled.div<{ isOpen: boolean }>`
   pointer-events: auto;
 `;
 
-export function App({ emotionCache }: { emotionCache: EmotionCache }) {
+const App = () => {
   const [isHidden, setIsHidden] = useState(() => localStorage.getItem('eb_fab_hidden') !== 'false');
   const [isOnRight, setIsOnRight] = useState(() => localStorage.getItem('eb_fab_side') !== 'left');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -142,10 +139,10 @@ export function App({ emotionCache }: { emotionCache: EmotionCache }) {
   };
 
   return (
-    <CacheProvider value={emotionCache}>
+    <>
       <GlobalStyles />
       <AppWrapper isOnRight={isOnRight}>
-        <FloatingActionButton
+        <Fab
           isHidden={isHidden}
           isOnRight={isOnRight}
           onToggle={handleTogglePanel}
@@ -181,6 +178,8 @@ export function App({ emotionCache }: { emotionCache: EmotionCache }) {
           )}
         </ContentContainer>
       </AppWrapper>
-    </CacheProvider>
+    </>
   );
-}
+};
+
+export default App;

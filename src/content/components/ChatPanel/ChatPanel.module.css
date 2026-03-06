@@ -1,0 +1,6 @@
+.chatBackground {
+  background-color: #1a1b1e !important;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(88, 101, 242, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%) !important;
+}

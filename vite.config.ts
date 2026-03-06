@@ -24,14 +24,15 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       emptyOutDir: true,
       target: 'esnext',
-      minify: !isDev,
+      minify: false,
+      // minify: !isDev,
       chunkSizeWarningLimit: 7000,
       rollupOptions: {
         input: {
-          background: 'src/background/index.ts',
+          background: 'src/chrome/background',
+          options: 'src/chrome/options',
+          offscreen: 'src/chrome/offscreen',
           contentMain: 'src/content/main.tsx',
-          options: 'src/ui/options.ts',
-          offscreen: 'src/offscreen/index.ts',
         },
         output: {
           entryFileNames: '[name].js',

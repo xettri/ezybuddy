@@ -1,5 +1,5 @@
-import type { PageContext } from '../content/pageAnalyzer';
-import { ensureOffscreenDocument } from '../background/index';
+import type { PageContext } from '../analyzer';
+import { offscreenManager } from '../services/offscreen';
 
 export interface PageQARequest {
   query: string;
@@ -72,7 +72,7 @@ function sanitizeQuery(query: string): string {
 
 class LocalWebLLMAdapter implements AIBackend {
   async pageQA(req: PageQARequest): Promise<PageQAResponse> {
-    await ensureOffscreenDocument();
+    await offscreenManager.ensure();
 
     const rawMarkdown = req.pageContext?.markdown ?? '';
     const pageTitle = req.pageContext?.title ?? '';
