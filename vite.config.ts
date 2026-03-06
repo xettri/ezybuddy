@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
           background: 'src/chrome/background',
           options: 'src/chrome/options',
           offscreen: 'src/chrome/offscreen',
-          contentMain: 'src/content/main.tsx',
+          content: 'src/chrome/content',
         },
         output: {
           entryFileNames: '[name].js',

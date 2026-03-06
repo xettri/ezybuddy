@@ -6,26 +6,23 @@ import App from './components/App';
 const EB_ROOT_ID = 'ezybuddy-root';
 const EB_CACHE_KEY = 'eb-xettri';
 
-// Developer Utility: Listen for a custom event from the page to wipe the WebLLM cache
-document.addEventListener('eb:clear-cache', () => {
-  console.debug('Requesting offscreen document to clear WebLLM cache...');
-  chrome.runtime.sendMessage({ type: 'DEV_CLEAR_CACHE' }, (res) => {
-    if (res?.ok) {
-      console.debug('Cache cleared! Reload the page to test fresh AI download.');
-    } else {
-      console.debug('Failed to clear cache:', res?.error);
-    }
-  });
-});
-
-function injectApp() {
-  if (document.getElementById(EB_ROOT_ID)) return;
-
+function getHost() {
   const hostNode = document.createElement('div');
   hostNode.id = EB_ROOT_ID;
   document.documentElement.appendChild(hostNode);
+  return hostNode;
+}
 
+function getShadowRoot() {
+  const hostNode = getHost();
   const shadowRoot = hostNode.attachShadow({ mode: 'open' });
+  return shadowRoot;
+}
+
+
+export function render() {
+  if (document.getElementById(EB_ROOT_ID)) return;
+  const shadowRoot = getShadowRoot();
 
   // Create Emotion cache for Shadow DOM
   const emotionCache = createCache({
@@ -45,8 +42,4 @@ function injectApp() {
   );
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', injectApp);
-} else {
-  injectApp();
-}
+export default render;
