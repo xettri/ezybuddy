@@ -1,5 +1,5 @@
-import type { PageContext } from "../content/pageAnalyzer";
-import { ensureOffscreenDocument } from "../background/index";
+import type { PageContext } from '../content/pageAnalyzer';
+import { ensureOffscreenDocument } from '../background/index';
 
 export interface PageQARequest {
   query: string;
@@ -47,14 +47,14 @@ const INJECTION_PATTERNS: RegExp[] = [
  */
 function sanitizePageContent(raw: string): string {
   // Strip [label](url) → label
-  let out = raw.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+  let out = raw.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
 
   // Replace prompt injection patterns
   for (const pattern of INJECTION_PATTERNS) {
-    out = out.replace(pattern, "[removed]");
+    out = out.replace(pattern, '[removed]');
   }
 
-  return out.replace(/\n{3,}/g, "\n\n").trim();
+  return out.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
@@ -65,7 +65,7 @@ function sanitizePageContent(raw: string): string {
 function sanitizeQuery(query: string): string {
   let q = query.trim().slice(0, 1000); // hard length cap
   for (const pattern of INJECTION_PATTERNS) {
-    q = q.replace(pattern, "");
+    q = q.replace(pattern, '');
   }
   return q.trim() || query.trim().slice(0, 1000);
 }
@@ -74,9 +74,9 @@ class LocalWebLLMAdapter implements AIBackend {
   async pageQA(req: PageQARequest): Promise<PageQAResponse> {
     await ensureOffscreenDocument();
 
-    const rawMarkdown = req.pageContext?.markdown ?? "";
-    const pageTitle = req.pageContext?.title ?? "";
-    const pageUrl = req.pageContext?.url ?? "";
+    const rawMarkdown = req.pageContext?.markdown ?? '';
+    const pageTitle = req.pageContext?.title ?? '';
+    const pageUrl = req.pageContext?.url ?? '';
     const selection = req.pageContext?.selectionContext?.text;
 
     // Sanitize page content to neutralize any embedded prompt injections
@@ -90,7 +90,7 @@ class LocalWebLLMAdapter implements AIBackend {
     if (cleanContent) contentLines.push(cleanContent);
     if (selection) contentLines.push(`\nUser highlighted this text on the page: "${selection}"`);
 
-    const pageContent = contentLines.join("\n\n");
+    const pageContent = contentLines.join('\n\n');
 
     // Identity anchor + guardrails system prompt
     const systemPrompt = `You are EzyBuddy, an AI browser assistant that helps users understand webpages.
@@ -120,18 +120,18 @@ FORMATTING:
       : `User question: ${safeQuery}`;
 
     chrome.runtime.sendMessage({
-      type: "OFFSCREEN_AI_REQUEST",
+      type: 'OFFSCREEN_AI_REQUEST',
       payload: {
         requestId: req.requestId,
         tabId: req.tabId,
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ]
-      }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      },
     });
 
-    return { message: "Stream started" };
+    return { message: 'Stream started' };
   }
 }
 

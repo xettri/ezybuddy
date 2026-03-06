@@ -1,4 +1,4 @@
-import { getBackend } from "../ai/backend";
+import { getBackend } from '../ai/backend';
 
 let creatingOffscreen: Promise<void> | null = null;
 
@@ -9,25 +9,25 @@ export async function ensureOffscreenDocument() {
     return;
   }
   creatingOffscreen = chrome.offscreen.createDocument({
-    url: "offscreen.html",
+    url: 'offscreen.html',
     reasons: [chrome.offscreen.Reason.WORKERS],
-    justification: "Running WebLLM local AI model in a sandboxed worker."
+    justification: 'Running WebLLM local AI model in a sandboxed worker.',
   });
   await creatingOffscreen;
   creatingOffscreen = null;
 }
 
 async function hasOffscreenDocument(): Promise<boolean> {
-  if ("getContexts" in chrome.runtime) {
+  if ('getContexts' in chrome.runtime) {
     const contexts = await chrome.runtime.getContexts({
-      contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT]
+      contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
     });
     return Boolean(contexts.length);
   }
   // Fallback for older Chrome builds
   try {
     const clients = await (self as any).clients.matchAll();
-    return clients.some((c: any) => c.url.includes("offscreen.html"));
+    return clients.some((c: any) => c.url.includes('offscreen.html'));
   } catch {
     return false;
   }
@@ -42,7 +42,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.id || tab.id < 0) return;
   try {
-    await chrome.tabs.sendMessage(tab.id, { type: "SHOW_CHAT" });
+    await chrome.tabs.sendMessage(tab.id, { type: 'SHOW_CHAT' });
   } catch {
     // Content script not yet injected or tab is restricted (chrome://, etc.) — ignore
   }
@@ -62,17 +62,17 @@ function isTrustedSender(sender: chrome.runtime.MessageSender): boolean {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || typeof message.type !== "string") return;
+  if (!message || typeof message.type !== 'string') return;
 
   // Relay streaming events from offscreen document to the requesting tab
   // Offscreen messages have no tab in sender; validate the target tabId is a number.
-  if (message.type.startsWith("OFFSCREEN_AI_")) {
-    if (message.type === "OFFSCREEN_AI_LOAD_PROGRESS") {
+  if (message.type.startsWith('OFFSCREEN_AI_')) {
+    if (message.type === 'OFFSCREEN_AI_LOAD_PROGRESS') {
       // Model loading is global; broadcast to all tabs so any open chat UI updates
       chrome.tabs.query({}, (tabs) => {
         for (const tab of tabs) {
           if (tab.id && tab.id > 0) {
-            chrome.tabs.sendMessage(tab.id, message).catch(() => { });
+            chrome.tabs.sendMessage(tab.id, message).catch(() => {});
           }
         }
       });
@@ -80,43 +80,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     const tabId = message.payload?.tabId;
-    if (typeof tabId === "number" && tabId > 0) {
-      chrome.tabs.sendMessage(tabId, message).catch(() => { });
+    if (typeof tabId === 'number' && tabId > 0) {
+      chrome.tabs.sendMessage(tabId, message).catch(() => {});
     }
     return false;
   }
 
   // PING — used to verify background is alive
-  if (message.type === "PING") {
+  if (message.type === 'PING') {
     sendResponse({ ok: true });
     return;
   }
 
   // ABORT — halt ongoing generations
-  if (message.type === "ABORT_AI_REQUEST") {
+  if (message.type === 'ABORT_AI_REQUEST') {
     if (!isTrustedSender(sender)) return;
-    chrome.runtime.sendMessage({ type: "ABORT_OFFSCREEN_AI_REQUEST" });
+    chrome.runtime.sendMessage({ type: 'ABORT_OFFSCREEN_AI_REQUEST' });
     return;
   }
 
   // Developer utility to clear cache
-  if (message.type === "DEV_CLEAR_CACHE") {
+  if (message.type === 'DEV_CLEAR_CACHE') {
     if (!isTrustedSender(sender)) return;
     // We must ensure the offscreen document is actually running before sending the message
-    ensureOffscreenDocument().then(() => {
-      chrome.runtime.sendMessage({ type: "DEV_CLEAR_CACHE" }, (res) => {
-        sendResponse(res);
+    ensureOffscreenDocument()
+      .then(() => {
+        chrome.runtime.sendMessage({ type: 'DEV_CLEAR_CACHE' }, (res) => {
+          sendResponse(res);
+        });
+      })
+      .catch((err) => {
+        sendResponse({ ok: false, error: 'Failed to spawn offscreen document: ' + err });
       });
-    }).catch(err => {
-      sendResponse({ ok: false, error: "Failed to spawn offscreen document: " + err });
-    });
     return true; // async
   }
 
   // AI_REQUEST — must come from a trusted content script
-  if (message.type === "AI_REQUEST") {
+  if (message.type === 'AI_REQUEST') {
     if (!isTrustedSender(sender)) {
-      sendResponse({ ok: false, error: "Unauthorized sender" });
+      sendResponse({ ok: false, error: 'Unauthorized sender' });
       return;
     }
 
@@ -125,23 +127,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const query = payload?.query;
     const tabId = sender.tab!.id!;
 
-    if (mode === "pageQA" && typeof query === "string" && query.length > 0 && query.length <= 2000) {
+    if (
+      mode === 'pageQA' &&
+      typeof query === 'string' &&
+      query.length > 0 &&
+      query.length <= 2000
+    ) {
       const backend = getBackend();
       backend
         .pageQA({
           query,
           pageContext: payload.pageContext,
           tabId,
-          requestId: typeof payload.requestId === "string" ? payload.requestId : String(Date.now())
+          requestId: typeof payload.requestId === 'string' ? payload.requestId : String(Date.now()),
         })
-        .then(() => { sendResponse({ ok: true, message: "Stream started" }); })
-        .catch(() => { sendResponse({ ok: false, error: "AI backend error" }); });
+        .then(() => {
+          sendResponse({ ok: true, message: 'Stream started' });
+        })
+        .catch(() => {
+          sendResponse({ ok: false, error: 'AI backend error' });
+        });
       return true; // async
     }
 
-    sendResponse({ ok: false, error: "Invalid request" });
+    sendResponse({ ok: false, error: 'Invalid request' });
     return;
   }
 });
-
-

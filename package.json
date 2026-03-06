@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "EzyBuddy - AI-ready Chrome extension for page Q&A and assistance",
   "scripts": {
-    "build": "node scripts/build.mjs"
+    "build": "node scripts/build.mjs",
+    "format": "prettier --write ."
   },
   "keywords": [
     "chrome-extension",
@@ -15,6 +16,7 @@
   "devDependencies": {
     "@types/chrome": "^0.1.37",
     "esbuild": "^0.27.3",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3"
   },
   "type": "module",

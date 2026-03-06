@@ -88,7 +88,7 @@ sequenceDiagram
 To test the fresh install experience (re-triggering the model download), open the Chrome DevTools console on any page and execute:
 
 ```javascript
-document.dispatchEvent(new CustomEvent("eb:clear-cache"));
+document.dispatchEvent(new CustomEvent('eb:clear-cache'));
 ```
 
 ## Security & CSP
