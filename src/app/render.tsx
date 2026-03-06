@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import createCache from '@emotion/cache';
 import { CacheProvider } from '@emotion/react';
-import App from './components/App';
+import App from './App';
 
 const EB_ROOT_ID = 'ezybuddy-root';
 const EB_CACHE_KEY = 'eb-xettri';
@@ -18,7 +18,6 @@ function getShadowRoot() {
   const shadowRoot = hostNode.attachShadow({ mode: 'open' });
   return shadowRoot;
 }
-
 
 export function render() {
   if (document.getElementById(EB_ROOT_ID)) return;

@@ -160,9 +160,9 @@ function trackSelection(): void {
     const surrounding =
       idx >= 0
         ? ctx.slice(
-          Math.max(0, idx - MAX_SURROUNDING / 2),
-          Math.min(ctx.length, idx + text.length + MAX_SURROUNDING / 2),
-        )
+            Math.max(0, idx - MAX_SURROUNDING / 2),
+            Math.min(ctx.length, idx + text.length + MAX_SURROUNDING / 2),
+          )
         : ctx.slice(0, MAX_SURROUNDING);
     lastSelection = { text, surroundingText: surrounding };
   });
@@ -653,7 +653,7 @@ export function buildPageContext(): PageContext {
   );
   try {
     (window as any).ezybuddyContext = context;
-  } catch { }
+  } catch {}
 
   return context;
 }

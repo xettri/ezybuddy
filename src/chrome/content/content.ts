@@ -14,7 +14,7 @@ document.addEventListener('eb:clear-cache', () => {
 
 function init() {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', render, { once: true })
+    document.addEventListener('DOMContentLoaded', render, { once: true });
   } else {
     render();
   }
