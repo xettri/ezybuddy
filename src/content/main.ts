@@ -19,7 +19,7 @@ const BORDER = 'rgba(255,255,255,0.12)';
 // State
 let modelLoaded = false;
 let isOnRight = localStorage.getItem('eb_fab_side') !== 'left'; // default right
-let isHidden = false;
+let isHidden = localStorage.getItem('eb_fab_hidden') !== 'false';
 
 // Root + Panel DOM refs (hoisted so message listener can access them)
 let _root: HTMLDivElement | null = null;
@@ -60,7 +60,7 @@ function saveHistory(entries: ChatEntry[]): void {
   const capped = entries.slice(-(MAX_EXCHANGES * 2));
   try {
     sessionStorage.setItem(historyKey(), JSON.stringify(capped));
-  } catch {}
+  } catch { }
 }
 
 // Helpers
@@ -103,11 +103,13 @@ function cleanMarkdown(raw: string): string {
 function showFAB() {
   if (!_root) return;
   isHidden = false;
+  localStorage.setItem('eb_fab_hidden', 'false');
   _root.style.display = 'block';
 }
 function hideFAB() {
   if (!_root) return;
   isHidden = true;
+  localStorage.setItem('eb_fab_hidden', 'true');
   if (_panel) _panel.style.display = 'none';
   _root.style.display = 'none';
 }
@@ -127,6 +129,7 @@ function createButton() {
     zIndex: '2147483647',
     fontFamily: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     userSelect: 'none',
+    display: isHidden ? 'none' : 'block',
   });
   document.documentElement.appendChild(root);
   _root = root;
@@ -298,7 +301,7 @@ function createButton() {
     chatHistory = [];
     try {
       sessionStorage.removeItem(historyKey());
-    } catch {}
+    } catch { }
   };
 
   const closeBtn = document.createElement('button');

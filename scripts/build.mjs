@@ -12,7 +12,7 @@ function copyStatic() {
   mkdirSync(dirname(manifestDest), { recursive: true });
   copyFileSync(manifestSrc, manifestDest);
 
-  const htmlFiles = ['popup.html', 'options.html', 'offscreen.html'];
+  const htmlFiles = ['options.html', 'offscreen.html'];
   for (const file of htmlFiles) {
     const src = resolve(rootDir, 'public', file);
     const dest = resolve(outdir, file);
