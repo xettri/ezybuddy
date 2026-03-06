@@ -50,14 +50,14 @@ export function useChatStream(historyKey: string) {
     setChatHistory(capped);
     try {
       sessionStorage.setItem(historyKey, JSON.stringify(capped));
-    } catch { }
+    } catch {}
   };
 
   const clearHistory = () => {
     setChatHistory([]);
     try {
       sessionStorage.removeItem(historyKey);
-    } catch { }
+    } catch {}
   };
 
   useEffect(() => {

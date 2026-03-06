@@ -6,7 +6,11 @@ export default defineConfig(({ mode }) => {
   const sourcemap = isDev ? true : !!process.env.SOURCEMAP;
 
   return {
-    plugins: [react()],
+    plugins: [
+      react({
+        jsxImportSource: '@emotion/react',
+      }),
+    ],
     resolve: {
       alias: {
         react: 'preact/compat',

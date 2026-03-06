@@ -1,17 +1,57 @@
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect } from 'react';
+import styled from '@emotion/styled';
+import { keyframes } from '@emotion/react';
 import { FloatingActionButton } from './FloatingActionButton';
 import { ChatPanel } from './ChatPanel';
 import { Onboarding, UserProfile } from './Onboarding';
 import { useChatStream } from '../hooks/useChatStream';
 import { buildPageContext } from '../pageAnalyzer';
+import { CacheProvider, EmotionCache } from '@emotion/react';
 
-export function App() {
+const panelIn = keyframes`
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+`;
+
+const AppWrapper = styled.div<{ isOnRight: boolean }>`
+  position: fixed;
+  pointer-events: none;
+  z-index: 2147483647;
+  bottom: 20px;
+  ${(props) => (props.isOnRight ? 'right: 20px;' : 'left: 20px;')}
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+`;
+
+const OnboardingOverlay = styled.div<{ isOnRight: boolean }>`
+  position: fixed;
+  bottom: 74px;
+  ${(props) => (props.isOnRight ? 'right: 20px;' : 'left: 20px;')}
+  width: 350px;
+  height: 460px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  background: rgba(15, 17, 20, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  z-index: 2147483647;
+  animation: ${panelIn} 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+`;
+
+const ContentContainer = styled.div<{ isOpen: boolean }>`
+  display: ${(props) => (props.isOpen ? 'block' : 'none')};
+  pointer-events: auto;
+`;
+
+export function App({ emotionCache }: { emotionCache: EmotionCache }) {
   const [isHidden, setIsHidden] = useState(() => localStorage.getItem('eb_fab_hidden') !== 'false');
   const [isOnRight, setIsOnRight] = useState(() => localStorage.getItem('eb_fab_side') !== 'left');
-
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const {
@@ -24,10 +64,8 @@ export function App() {
     clearHistory,
   } = useChatStream('eb_hist_' + location.href);
 
-  // Load Profile
   useEffect(() => {
     chrome.storage.local.get('ezybuddy:userProfile', (data) => {
-      console.log('Data: ', data);
       const p = data['ezybuddy:userProfile'] as UserProfile;
       if (p && (p.name || p.profession || p.interests)) {
         setUserProfile(p);
@@ -37,7 +75,6 @@ export function App() {
     });
   }, []);
 
-  // Listen for extension icon click
   useEffect(() => {
     const listener = (msg: any) => {
       if (msg.type === 'SHOW_CHAT') {
@@ -104,76 +141,44 @@ export function App() {
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        pointerEvents: 'none',
-        zIndex: 2147483647,
-        bottom: '20px',
-        [isOnRight ? 'right' : 'left']: '20px',
-        fontFamily: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      <FloatingActionButton
-        isHidden={isHidden}
-        isOnRight={isOnRight}
-        onToggle={handleTogglePanel}
-        onHide={handleHideFab}
-        onSnapLeft={() => handleSnapSide(false)}
-        onSnapRight={() => handleSnapSide(true)}
-      />
+    <CacheProvider value={emotionCache}>
+      <AppWrapper isOnRight={isOnRight}>
+        <FloatingActionButton
+          isHidden={isHidden}
+          isOnRight={isOnRight}
+          onToggle={handleTogglePanel}
+          onHide={handleHideFab}
+          onSnapLeft={() => handleSnapSide(false)}
+          onSnapRight={() => handleSnapSide(true)}
+        />
 
-      {/* Main chat UI container */}
-      <div
-        style={{
-          display: isPanelOpen && !isHidden ? 'block' : 'none',
-          pointerEvents: 'auto',
-        }}
-      >
-        {showOnboarding ? (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: '74px',
-              [isOnRight ? 'right' : 'left']: '20px',
-              width: '350px',
-              height: '460px',
-              display: 'flex',
-              flexDirection: 'column',
-              borderRadius: '20px',
-              background: 'rgba(15, 17, 20, 0.95)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
-              overflow: 'hidden',
-              zIndex: 2147483647,
-              animation: 'eb-panel-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-          >
-            <Onboarding
-              initialProfile={userProfile}
-              onSave={handleSaveProfile}
+        <ContentContainer isOpen={isPanelOpen && !isHidden}>
+          {showOnboarding ? (
+            <OnboardingOverlay isOnRight={isOnRight}>
+              <Onboarding
+                initialProfile={userProfile}
+                onSave={handleSaveProfile}
+                onClose={() => setIsPanelOpen(false)}
+              />
+            </OnboardingOverlay>
+          ) : (
+            <ChatPanel
+              isOpen={isPanelOpen}
+              isOnRight={isOnRight}
               onClose={() => setIsPanelOpen(false)}
+              onClearHistory={clearHistory}
+              onOpenProfile={() => setShowOnboarding(true)}
+              modelLoaded={modelLoaded}
+              modelProgress={modelProgress}
+              modelStatusText={modelStatusText}
+              chatHistory={chatHistory}
+              activeRequest={activeRequest}
+              onSend={handleSend}
+              userProfile={userProfile}
             />
-          </div>
-        ) : (
-          <ChatPanel
-            isOpen={isPanelOpen}
-            isOnRight={isOnRight}
-            onClose={() => setIsPanelOpen(false)}
-            onClearHistory={clearHistory}
-            onOpenProfile={() => setShowOnboarding(true)}
-            modelLoaded={modelLoaded}
-            modelProgress={modelProgress}
-            modelStatusText={modelStatusText}
-            chatHistory={chatHistory}
-            activeRequest={activeRequest}
-            onSend={handleSend}
-            userProfile={userProfile}
-          />
-        )}
-      </div>
-    </div>
+          )}
+        </ContentContainer>
+      </AppWrapper>
+    </CacheProvider>
   );
 }

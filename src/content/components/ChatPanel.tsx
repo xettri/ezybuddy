@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
 import { ChatEntry } from '../hooks/useChatStream';
+import styled from '@emotion/styled';
+import { keyframes } from '@emotion/react';
 
 interface ChatPanelProps {
   isOpen: boolean;
@@ -26,12 +28,261 @@ interface ChatPanelProps {
   userProfile: { name: string; profession: string; interests: string } | null;
 }
 
+const panelIn = keyframes`
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+`;
+
+const bubbleIn = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const dotPulse = keyframes`
+  0%, 100% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 1; }
+`;
+
+const PanelContainer = styled.div<{ isOnRight: boolean }>`
+  position: fixed;
+  bottom: 74px;
+  ${(props) => (props.isOnRight ? 'right: 20px;' : 'left: 20px;')}
+  width: 350px;
+  max-height: 560px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  borderradius: 20px;
+  background: rgba(15, 17, 20, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  z-index: 2147483647;
+  animation: ${panelIn} 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+`;
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 17, 20, 0.85);
+`;
+
+const StatusIndicator = styled.div<{ loaded: boolean }>`
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: ${(props) => (props.loaded ? '#23a55a' : '#f87171')};
+  box-shadow: ${(props) => (props.loaded ? '0 0 6px rgba(35, 165, 90, 0.7)' : 'none')};
+`;
+
+const IconButton = styled.button`
+  border: none;
+  background: transparent;
+  color: #b5bac1;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.2s,
+    color 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f2f3f5;
+  }
+`;
+
+const QuickActions = styled.div`
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  flex-wrap: wrap;
+`;
+
+const Chip = styled.button`
+  border: 1px solid rgba(88, 101, 242, 0.25);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  background: rgba(88, 101, 242, 0.15);
+  color: #b9beff;
+  outline: none;
+  font-family: inherit;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+
+  &:hover {
+    background: rgba(88, 101, 242, 0.25);
+    border-color: rgba(88, 101, 242, 0.4);
+  }
+`;
+
+const MessagesArea = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+`;
+
+const Bubble = styled.div<{ role: 'user' | 'assistant' }>`
+  align-self: ${(props) => (props.role === 'user' ? 'flex-end' : 'flex-start')};
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: ${(props) =>
+    props.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+  background: ${(props) =>
+    props.role === 'user'
+      ? 'linear-gradient(135deg, #5865f2 0%, #8b5cf6 100%)'
+      : 'rgba(15, 17, 20, 0.85)'};
+  border: ${(props) => (props.role === 'user' ? 'none' : '1px solid rgba(255, 255, 255, 0.12)')};
+  color: ${(props) => (props.role === 'user' ? '#fff' : '#f2f3f5')};
+  animation: ${bubbleIn} 0.3s ease-out;
+
+  /* Markdown content styling */
+  ul,
+  ol {
+    margin: 8px 0;
+    padding-left: 18px;
+  }
+  li {
+    margin-bottom: 4px;
+  }
+  p:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const ProgressBubble = styled.div<{ loaded: boolean }>`
+  align-self: ${(props) => (props.loaded ? 'flex-start' : 'center')};
+  width: ${(props) => (props.loaded ? 'auto' : '90%')};
+  padding: 14px 16px;
+  border-radius: ${(props) => (props.loaded ? '14px 14px 14px 4px' : '12px')};
+  background: rgba(15, 17, 20, 0.85);
+  border: 1px solid rgba(88, 101, 242, 0.2);
+  text-align: ${(props) => (props.loaded ? 'left' : 'center')};
+  color: #f2f3f5;
+  animation: ${bubbleIn} 0.3s ease-out;
+`;
+
+const Dot = styled.div`
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #5865f2;
+  margin: 0 2px;
+  animation: ${dotPulse} 1.3s ease infinite;
+
+  &:nth-of-type(2) {
+    animation-delay: 0.18s;
+  }
+  &:nth-of-type(3) {
+    animation-delay: 0.36s;
+  }
+`;
+
+const ProgressBar = styled.div`
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  margin: 10px 0 6px;
+`;
+
+const ProgressFill = styled.div<{ progress: number }>`
+  width: ${(props) => props.progress}%;
+  height: 100%;
+  border-radius: 999px;
+  background: #5865f2;
+  transition: width 0.3s ease;
+`;
+
+const Composer = styled.div`
+  display: flex;
+  padding: 10px 12px;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  align-items: center;
+`;
+
+const InputField = styled.input`
+  flex: 1;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+  color: #f2f3f5;
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: rgba(88, 101, 242, 0.4);
+  }
+`;
+
+const SendButton = styled.button`
+  border: none;
+  background: linear-gradient(135deg, #5865f2 0%, #8b5cf6 100%);
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+  &:active {
+    transform: scale(0.95);
+  }
+`;
+
 export function ChatPanel(props: ChatPanelProps) {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -47,7 +298,7 @@ export function ChatPanel(props: ChatPanelProps) {
     props.onSend(text);
   };
 
-  const handleKeyDown = (e: any) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleSend();
@@ -55,23 +306,9 @@ export function ChatPanel(props: ChatPanelProps) {
   };
 
   const makeChip = (label: string, query: string) => (
-    <button
-      onClick={() => props.onSend(label, query)}
-      style={{
-        border: '1px solid rgba(88,101,242,0.25)',
-        borderRadius: '6px',
-        padding: '4px 10px',
-        fontSize: '11.5px',
-        fontWeight: '500',
-        cursor: 'pointer',
-        background: 'rgba(88,101,242,0.15)',
-        color: '#b9beff',
-        outline: 'none',
-        fontFamily: 'inherit',
-      }}
-    >
+    <Chip key={label} onClick={() => props.onSend(label, query)}>
       {label}
-    </button>
+    </Chip>
   );
 
   const getWhyUsefulChip = () => {
@@ -97,64 +334,14 @@ export function ChatPanel(props: ChatPanelProps) {
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: '74px',
-        [props.isOnRight ? 'right' : 'left']: '20px',
-        width: '350px',
-        maxHeight: '560px',
-        height: '80vh',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: '20px',
-        background: 'rgba(15, 17, 20, 0.95)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        boxShadow: '0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15)',
-        overflow: 'hidden',
-        zIndex: 2147483647,
-        animation: 'eb-panel-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        pointerEvents: 'auto',
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 14px 11px',
-          borderBottom: '1px solid rgba(255,255,255,0.12)',
-          background: 'rgba(15, 17, 20, 0.85)',
-        }}
-      >
+    <PanelContainer isOnRight={props.isOnRight}>
+      <Header>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: props.modelLoaded ? '#23a55a' : '#f87171',
-              boxShadow: props.modelLoaded ? '0 0 6px rgba(35,165,90,0.7)' : 'none',
-            }}
-          ></div>
+          <StatusIndicator loaded={props.modelLoaded} />
           <span style={{ fontSize: '13.5px', fontWeight: '600', color: '#f2f3f5' }}>EzyBuddy</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-          <button
-            title="Settings / Profile"
-            onClick={props.onOpenProfile}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              color: '#b5bac1',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '6px',
-            }}
-          >
+          <IconButton title="Settings / Profile" onClick={props.onOpenProfile}>
             <svg
               width="13"
               height="13"
@@ -166,19 +353,8 @@ export function ChatPanel(props: ChatPanelProps) {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-          </button>
-          <button
-            title="Clear history"
-            onClick={props.onClearHistory}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              color: '#b5bac1',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '6px',
-            }}
-          >
+          </IconButton>
+          <IconButton title="Clear history" onClick={props.onClearHistory}>
             <svg
               width="13"
               height="13"
@@ -194,18 +370,8 @@ export function ChatPanel(props: ChatPanelProps) {
               <path d="M10 11v6M14 11v6" />
               <path d="M9 6V4h6v2" />
             </svg>
-          </button>
-          <button
-            onClick={props.onClose}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              color: '#b5bac1',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '6px',
-            }}
-          >
+          </IconButton>
+          <IconButton onClick={props.onClose} title="Close">
             <svg
               width="14"
               height="14"
@@ -217,207 +383,73 @@ export function ChatPanel(props: ChatPanelProps) {
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
-          </button>
+          </IconButton>
         </div>
-      </div>
+      </Header>
 
-      {/* Quick Actions */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '6px',
-          padding: '8px 12px',
-          borderBottom: '1px solid rgba(255,255,255,0.12)',
-          flexWrap: 'wrap',
-        }}
-      >
+      <QuickActions>
         {makeChip('Summarize', 'Summarize this page in a few bullet points')}
         {makeChip('Key points', 'List the key points of this page as bullet points')}
         {getWhyUsefulChip()}
-      </div>
+      </QuickActions>
 
-      {/* Messages */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '12px 14px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-        }}
-      >
+      <MessagesArea>
         {props.chatHistory.map((msg, i) => (
-          <div
-            key={i}
-            className={`eb-bubble-anim ${msg.role === 'assistant' ? 'eb-md' : ''}`}
-            style={{
-              alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '88%',
-              padding: '10px 14px',
-              borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-              fontSize: '13px',
-              lineHeight: '1.55',
-              wordBreak: 'break-word',
-              background:
-                msg.role === 'user'
-                  ? 'linear-gradient(135deg, #5865f2 0%, #8b5cf6 100%)'
-                  : 'rgba(15, 17, 20, 0.85)',
-              border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.12)',
-              color: msg.role === 'user' ? '#fff' : '#f2f3f5',
-            }}
-          >
+          <Bubble key={i} role={msg.role}>
             {msg.role === 'user' ? (
               msg.text
             ) : (
               <div dangerouslySetInnerHTML={{ __html: marked.parse(msg.text) as string }} />
             )}
-          </div>
+          </Bubble>
         ))}
 
         {props.activeRequest && (
           <>
-            {/* Active User Message */}
-            <div
-              className="eb-bubble-anim"
-              style={{
-                alignSelf: 'flex-end',
-                maxWidth: '88%',
-                padding: '10px 14px',
-                borderRadius: '16px 16px 4px 16px',
-                fontSize: '13px',
-                lineHeight: '1.55',
-                wordBreak: 'break-word',
-                background: 'linear-gradient(135deg, #5865f2 0%, #8b5cf6 100%)',
-                color: '#fff',
-              }}
-            >
-              {props.activeRequest.userText}
-            </div>
+            <Bubble role="user">{props.activeRequest.userText}</Bubble>
 
-            {/* Typing / Progress Indicator or Active AI Response */}
             {props.activeRequest.error || !props.activeRequest.htmlResult ? (
-              <div
-                className="eb-bubble-anim"
-                style={{
-                  alignSelf: props.modelLoaded ? 'flex-start' : 'center',
-                  width: props.modelLoaded ? 'auto' : '90%',
-                  padding: '14px 16px',
-                  borderRadius: props.modelLoaded ? '14px 14px 14px 4px' : '12px',
-                  background: 'rgba(15, 17, 20, 0.85)',
-                  border: '1px solid rgba(88,101,242,0.2)',
-                  textAlign: props.modelLoaded ? 'left' : 'center',
-                  color: '#f2f3f5',
-                }}
-              >
+              <ProgressBubble loaded={props.modelLoaded}>
                 {props.activeRequest.error ? (
                   `⚠️ ${props.activeRequest.error}`
                 ) : props.modelLoaded ? (
                   <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <div className="eb-dot"></div>
-                    <div className="eb-dot"></div>
-                    <div className="eb-dot"></div>
+                    <Dot />
+                    <Dot />
+                    <Dot />
                   </div>
                 ) : (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#b5bac1', marginBottom: '10px' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#b5bac1' }}>
                       {props.modelStatusText}
                     </div>
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '3px',
-                        borderRadius: '999px',
-                        background: 'rgba(255,255,255,0.06)',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${props.modelProgress}%`,
-                          height: '100%',
-                          borderRadius: '999px',
-                          background: '#5865f2',
-                          transition: 'width 0.3s ease',
-                        }}
-                      ></div>
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#5865a0', marginTop: '6px' }}>
-                      {props.modelProgress}%
-                    </div>
+                    <ProgressBar>
+                      <ProgressFill progress={props.modelProgress} />
+                    </ProgressBar>
+                    <div style={{ fontSize: '11px', color: '#5865a0' }}>{props.modelProgress}%</div>
                   </div>
                 )}
-              </div>
+              </ProgressBubble>
             ) : (
-              <div
-                className="eb-bubble-anim eb-md"
-                style={{
-                  alignSelf: 'flex-start',
-                  maxWidth: '88%',
-                  padding: '10px 14px',
-                  borderRadius: '16px 16px 16px 4px',
-                  fontSize: '13px',
-                  lineHeight: '1.55',
-                  wordBreak: 'break-word',
-                  background: 'rgba(15, 17, 20, 0.85)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#f2f3f5',
-                }}
-              >
+              <Bubble role="assistant">
                 <div dangerouslySetInnerHTML={{ __html: props.activeRequest.htmlResult }} />
-              </div>
+              </Bubble>
             )}
           </>
         )}
         <div ref={messagesEndRef} />
-      </div>
+      </MessagesArea>
 
-      {/* Composer */}
-      <div
-        style={{
-          display: 'flex',
-          padding: '10px 12px',
-          gap: '8px',
-          background: 'rgba(0, 0, 0, 0.35)',
-          borderTop: '1px solid rgba(255,255,255,0.12)',
-          alignItems: 'center',
-        }}
-      >
-        <input
+      <Composer>
+        <InputField
           ref={inputRef}
           type="text"
           value={inputValue}
-          onInput={(e: any) => setInputValue(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask about this page…"
-          style={{
-            flex: 1,
-            borderRadius: '8px',
-            border: '1px solid rgba(255,255,255,0.08)',
-            background: 'rgba(0,0,0,0.3)',
-            color: '#f2f3f5',
-            fontSize: '13px',
-            padding: '8px 12px',
-            outline: 'none',
-          }}
         />
-        <button
-          onClick={handleSend}
-          title="Send"
-          style={{
-            border: 'none',
-            background: 'linear-gradient(135deg, #5865f2 0%, #8b5cf6 100%)',
-            color: '#fff',
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
+        <SendButton onClick={handleSend} title="Send">
           <svg
             width="15"
             height="15"
@@ -431,8 +463,8 @@ export function ChatPanel(props: ChatPanelProps) {
             <line x1="22" y1="2" x2="11" y2="13" />
             <polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>
-        </button>
-      </div>
-    </div>
+        </SendButton>
+      </Composer>
+    </PanelContainer>
   );
 }

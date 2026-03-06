@@ -1,7 +1,9 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './components/App';
+import createCache from '@emotion/cache';
 
 const EB_ROOT_ID = 'ezybuddy-root';
+const EB_CACHE_KEY = 'eb-xettri';
 
 // Developer Utility: Listen for a custom event from the page to wipe the WebLLM cache
 document.addEventListener('eb:clear-cache', () => {
@@ -62,12 +64,18 @@ function injectApp() {
   `;
   shadowRoot.appendChild(style);
 
+  // Create Emotion cache for Shadow DOM
+  const emotionCache = createCache({
+    key: EB_CACHE_KEY,
+    container: shadowRoot,
+  });
+
   // Render the React App into the shadow root
   const appContainer = document.createElement('div');
   shadowRoot.appendChild(appContainer);
 
   const root = createRoot(appContainer);
-  root.render(<App />);
+  root.render(<App emotionCache={emotionCache} />);
 }
 
 if (document.readyState === 'loading') {
