@@ -1,4 +1,13 @@
-import { CreateMLCEngine, MLCEngine, ChatCompletionMessageParam } from "@mlc-ai/web-llm";
+import {
+  CreateMLCEngine,
+  MLCEngine,
+  ChatCompletionMessageParam,
+  hasModelInCache,
+  deleteChatConfigInCache,
+  deleteModelAllInfoInCache,
+  deleteModelWasmInCache,
+  deleteModelInCache
+} from "@mlc-ai/web-llm";
 
 const MODEL_ID = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
 let engine: MLCEngine | null = null;
@@ -8,11 +17,15 @@ async function getEngine(): Promise<MLCEngine> {
   if (engine) return engine;
   if (engineInitPromise) return engineInitPromise;
 
+  let isCached = false;
+  hasModelInCache(MODEL_ID).then(res => isCached = res).catch(() => { });
+
   engineInitPromise = CreateMLCEngine(MODEL_ID, {
     initProgressCallback: (progress) => {
       chrome.runtime.sendMessage({
         type: "OFFSCREEN_AI_LOAD_PROGRESS",
-        payload: { progress: progress.progress, text: progress.text }
+        // Pass whether we think the model is already downloaded to avoid UI flicker
+        payload: { progress: progress.progress, text: progress.text, isCached }
       });
     }
   });
@@ -57,6 +70,31 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "PING_OFFSCREEN") {
     sendResponse({ ok: true, status: engine ? "ready" : "uninitialized" });
     return;
+  }
+
+  if (message.type === "DEV_CLEAR_CACHE") {
+    console.log("Handling DEV_CLEAR_CACHE for:", MODEL_ID);
+    (async () => {
+      try {
+        const hasModel = await hasModelInCache(MODEL_ID);
+        console.log("Model present before delete:", hasModel);
+
+        await deleteChatConfigInCache(MODEL_ID);
+        await deleteModelInCache(MODEL_ID);
+        await deleteModelWasmInCache(MODEL_ID);
+        await deleteModelAllInfoInCache(MODEL_ID);
+
+        // Reset engine references so the next request forces a download
+        engine = null;
+        engineInitPromise = null;
+
+        sendResponse({ ok: true });
+      } catch (err: any) {
+        console.error(err);
+        sendResponse({ ok: false, error: err.message });
+      }
+    })();
+    return true; // Keep message channel open for async response
   }
 
   if (message.type === "ABORT_OFFSCREEN_AI_REQUEST") {

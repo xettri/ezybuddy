@@ -25,6 +25,19 @@ let isHidden = false;
 let _root: HTMLDivElement | null = null;
 let _panel: HTMLDivElement | null = null;
 
+// Developer Utility: Listen for a custom event from the page to wipe the WebLLM cache
+// Usage in console: document.dispatchEvent(new CustomEvent("eb:clear-cache"))
+document.addEventListener("eb:clear-cache", () => {
+  console.debug("Requesting offscreen document to clear WebLLM cache...");
+  chrome.runtime.sendMessage({ type: "DEV_CLEAR_CACHE" }, (res) => {
+    if (res?.ok) {
+      console.debug("Cache cleared! Reload the page to test fresh AI download.");
+    } else {
+      console.debug("Failed to clear cache:", res?.error);
+    }
+  });
+});
+
 // Per-page chat history — stored in sessionStorage, clears on page reload
 const MAX_EXCHANGES = 5; // user+assistant pairs to remember
 type ChatEntry = { role: "user" | "assistant"; text: string };
@@ -634,14 +647,22 @@ function createButton() {
 
     if (msg.type === "OFFSCREEN_AI_LOAD_PROGRESS") {
       const pct = Math.round((msg.payload?.progress ?? 0) * 100);
-      const txt = msg.payload?.text ?? "Loading…";
+      const isCached = msg.payload?.isCached === true;
+
+      // UX refinement: Instead of showing raw WebLLM logs like "Fetching param cache...",
+      // show a clean, reassuring message to the user.
+      const displayTxt = (modelLoaded || isCached)
+        ? "Waking up AI engine…"
+        : "Loading AI model (first time only)";
+
       if (pct >= 100) modelLoaded = true;
+
       activeRequests.forEach((req) => {
         const bar = req.typingEl?.querySelector<HTMLElement>('[data-role="progressBar"]');
         const status = req.typingEl?.querySelector<HTMLElement>('[data-role="statusText"]');
         const pctEl = req.typingEl?.querySelector<HTMLElement>('[data-role="pctText"]');
         if (bar) bar.style.width = pct + "%";
-        if (status) status.textContent = pct < 100 ? txt : "Almost ready…";
+        if (status) status.textContent = pct < 100 ? displayTxt : "Almost ready…";
         if (pctEl) pctEl.textContent = pct + "%";
       });
       return;

@@ -67,9 +67,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Relay streaming events from offscreen document to the requesting tab
   // Offscreen messages have no tab in sender; validate the target tabId is a number.
   if (message.type.startsWith("OFFSCREEN_AI_")) {
+    if (message.type === "OFFSCREEN_AI_LOAD_PROGRESS") {
+      // Model loading is global; broadcast to all tabs so any open chat UI updates
+      chrome.tabs.query({}, (tabs) => {
+        for (const tab of tabs) {
+          if (tab.id && tab.id > 0) {
+            chrome.tabs.sendMessage(tab.id, message).catch(() => { });
+          }
+        }
+      });
+      return false;
+    }
+
     const tabId = message.payload?.tabId;
     if (typeof tabId === "number" && tabId > 0) {
-      chrome.tabs.sendMessage(tabId, message);
+      chrome.tabs.sendMessage(tabId, message).catch(() => { });
     }
     return false;
   }
@@ -85,6 +97,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!isTrustedSender(sender)) return;
     chrome.runtime.sendMessage({ type: "ABORT_OFFSCREEN_AI_REQUEST" });
     return;
+  }
+
+  // Developer utility to clear cache
+  if (message.type === "DEV_CLEAR_CACHE") {
+    if (!isTrustedSender(sender)) return;
+    // We must ensure the offscreen document is actually running before sending the message
+    ensureOffscreenDocument().then(() => {
+      chrome.runtime.sendMessage({ type: "DEV_CLEAR_CACHE" }, (res) => {
+        sendResponse(res);
+      });
+    }).catch(err => {
+      sendResponse({ ok: false, error: "Failed to spawn offscreen document: " + err });
+    });
+    return true; // async
   }
 
   // AI_REQUEST — must come from a trusted content script
