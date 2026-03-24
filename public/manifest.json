@@ -16,7 +16,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["storage", "activeTab", "offscreen"],
+  "permissions": ["storage", "unlimitedStorage", "activeTab", "offscreen"],
   "host_permissions": ["<all_urls>"],
   "options_page": "options.html",
   "content_scripts": [
